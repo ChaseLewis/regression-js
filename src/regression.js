@@ -7,6 +7,7 @@
 * copyright(c) 2013 Tom Alexander
 * Licensed under the MIT license.
 *
+* This copy is a fork created by Chase Lewis and hosted @ https://github.com/ChaseLewis/regression-js
 * @module regression - Least-squares regression functions for JavaScript
 **/
 function BIC(rss,n,p)
@@ -138,7 +139,7 @@ function BIC(rss,n,p)
     {
         var models = [{type: 'linear' }, {type: 'polynomial', order: 2 }, {type: 'polynomial', order: 3 }, {type: 'polynomial', order: 4 }, {type: 'exponential'}, {type: 'logarithmic' }];
         
-        if (Array.isArray(order))
+        if (order)
             models = order;
 
         var preferred;
@@ -448,11 +449,6 @@ function BIC(rss,n,p)
 
     if (!methodOptions.precision) {
       methodOptions.precision = _DEFAULT_PRECISION;
-    }
-
-    if (Array.isArray(order))
-    {
-        return methods['auto'](data, order, methodOptions);
     }
 
     if (typeof method === 'string')

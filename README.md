@@ -24,7 +24,7 @@ All models return an object with the following properties:
 - `equation`: an array containing the coefficients of the equation
 - `string`: A string representation of the equation
 - `points`: an array containing the predicted data
-- `r2`: the coefficient of determination (<i>R</i><sup>2</sup>)
+- `r2`: the <a href="https://en.wikipedia.org/wiki/Coefficient_of_determination">coefficient of determination</a>(<i>R</i><sup>2</sup>)
 - `bic`: the <a href="https://en.wikipedia.org/wiki/Bayesian_information_criterion">bayesian information criteria</a>
 - `predict`: a function of the form f(x) that can be used to invoke a regression model on a value
 
@@ -86,7 +86,7 @@ Not exactly a regression. Uses the last value to fill the blanks when forecastin
 
 Auto
 ----------
-This compares the <a href="https://en.wikipedia.org/wiki/Bayesian_information_criterion">bic</a> parameters of multiple models to determine the best.
+This compares the <a href="https://en.wikipedia.org/wiki/Bayesian_information_criterion">bic</a> parameters of multiple models to determine the one that fits the data best.
 
 ```javascript
 var data = [[0,1],[32, 67] .... [12, 79]];
@@ -94,7 +94,7 @@ var models = [{type: 'linear' }, {type: 'polynomial', order: 2}, {type: 'exponen
 var result = regression('auto',data, models);
 ```
 
-If models is undefined or not an array regression.js will check linear, quadratic, cubic, quartic, exponential, and logarithmic models
+If models is undefined regression.js will check linear, quadratic, cubic, quartic, exponential, and logarithmic models
 and returns whichever appears to most accurately model the data. 
 
 ```javascript
