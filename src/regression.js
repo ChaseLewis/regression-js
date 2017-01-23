@@ -9,6 +9,10 @@
 *
 * @module regression - Least-squares regression functions for JavaScript
 **/
+function BIC(rss,n,p)
+{
+    return n + n*Math.log(2*Math.PI) + n*Math.log(rss/n) + Math.log(n)*(p+1);
+}
 
 /* global define */
 (function _umd(global, factory) {
@@ -35,7 +39,7 @@
    *
    * @return {number} - The r^2 value, or NaN if one cannot be calculated.
    */
-  function determinationCoefficient(observations, predictions) {
+  function determinationCoefficient(observations, predictions,constants) {
     var sum = observations.reduce(function (accum, observation) { return accum + observation[1]; }, 0);
     var mean = sum / observations.length;
 
@@ -53,7 +57,7 @@
     }, 0);
 
     // If ssyy is zero, r^2 is meaningless, so NaN is an appropriate answer.
-    return 1 - (sse / ssyy);
+    return {r2: 1 - (sse / ssyy), bic: BIC(sse,observations.length,constants) };
   }
 
   /**
@@ -130,6 +134,23 @@
    * @namespace
    */
   var methods = {
+    auto: function(data, order, options)
+    {
+        var models = [{type: 'linear' }, {type: 'polynomial', order: 2 }, {type: 'polynomial', order: 3 }, {type: 'polynomial', order: 4 }, {type: 'exponential'}, {type: 'logarithmic' }];
+        
+        if (Array.isArray(order))
+            models = order;
+
+        var preferred;
+        for(var i = 0;i < models.length;i++)
+        {
+            var test = this[models[i].type](data, models[i].order, options);
+            if (!preferred || preferred.bic > test.bic)
+                preferred = test;
+        }
+
+        return preferred;
+    },
     linear: function (data, _order, options) {
       var sum = [0, 0, 0, 0, 0];
       var results;
@@ -155,8 +176,11 @@
         return [x, gradient * x + intercept];
       });
 
+      var analysis = determinationCoefficient(data, results, 2);
       return {
-        r2: determinationCoefficient(data, results),
+        r2: analysis.r2,
+        bic: analysis.bic,
+        predict: function (x) { return this.equation[0] * x + this.equation[1]; },
         equation: [gradient, intercept],
         points: results,
         string: 'y = ' + _round(gradient, options.precision) + 'x + ' + _round(intercept, options.precision),
@@ -182,8 +206,11 @@
         return [x, gradient * x];
       });
 
+      var analysis = determinationCoefficient(data, results, 1);
       return {
-        r2: determinationCoefficient(data, results),
+        r2: analysis.r2,
+        bic: analysis.bic,
+        predict: function(x) { return this.equation[0]*x; },
         equation: [gradient],
         points: results,
         string: 'y = ' + _round(gradient, options.precision) + 'x',
@@ -217,8 +244,11 @@
         return [x, coeffA * Math.exp(coeffB * x)];
       });
 
+      var analysis = determinationCoefficient(data, results, 2);
       return {
-        r2: determinationCoefficient(data, results),
+        r2: analysis.r2,
+        bic: analysis.bic,
+        predict: function (x) { return this.equation[0] * Math.exp(this.equation[1] * x); },
         equation: [coeffA, coeffB],
         points: results,
         string: 'y = ' + _round(coeffA, options.precision) + 'e^(' + _round(coeffB, options.precision) + 'x)',
@@ -249,8 +279,11 @@
         return [x, coeffA + coeffB * Math.log(x)];
       });
 
+      var analysis = determinationCoefficient(data, results, 2);
       return {
-        r2: determinationCoefficient(data, results),
+        r2: analysis.r2,
+        bic: analysis.bic,
+        predict: function (x) { return this.equation[0] + this.equation[1] * Math.log(x); },
         equation: [coeffA, coeffB],
         points: results,
         string: 'y = ' + _round(coeffA, options.precision) + ' + ' + _round(coeffB, options.precision) + ' ln(x)',
@@ -281,8 +314,11 @@
         return [x, coeffA * Math.pow(x, coeffB)];
       });
 
+      var analysis = determinationCoefficient(data, results, 2);
       return {
-        r2: determinationCoefficient(data, results),
+        r2: analysis.r2,
+        bic: analysis.bic,
+        predict: function (x) { return this.equation[0] * Math.pow(x, this.equation[1]); },
         equation: [coeffA, coeffB],
         points: results,
         string: 'y = ' + _round(coeffA, options.precision) + 'x^' + _round(coeffB, options.precision),
@@ -359,8 +395,19 @@
         }
       }
 
+      var analysis = determinationCoefficient(data, results, order + 1);
       return {
-        r2: determinationCoefficient(data, results),
+        r2: analysis.r2,
+        bic: analysis.bic,
+        predict: function (x)
+        {
+            var y = 0;
+            for (var i = this.equation.length-1; i >= 0; i--) {
+                y *= x;
+                y += this.equation[i];
+            }
+            return y;
+        },
         equation: equation,
         points: results,
         string: string,
@@ -380,8 +427,11 @@
         }
       }
 
+      var analysis = determinationCoefficient(data, results, 1);
       return {
-        r2: determinationCoefficient(data, results),
+        r2: analysis.r2,
+        bic: analysis.bic,
+        predict: function(x) {return equation[0];},
         equation: [lastvalue],
         points: results,
         string: '' + _round(lastvalue, options.precision),
@@ -400,9 +450,16 @@
       methodOptions.precision = _DEFAULT_PRECISION;
     }
 
-    if (typeof method === 'string') {
+    if (Array.isArray(order))
+    {
+        return methods['auto'](data, order, methodOptions);
+    }
+
+    if (typeof method === 'string')
+    {
       return methods[method.toLowerCase()](data, order, methodOptions);
     }
+
     return null;
   };
 
